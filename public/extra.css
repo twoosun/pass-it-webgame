@@ -1,0 +1,12 @@
+.panel{max-height:96vh;overflow:auto}
+#create-password,#join-password{margin-top:10px}
+.room-browser{margin-top:20px;padding-top:15px;border-top:1px solid #ffffff18}
+.room-browser>b{display:inline-block;margin-right:10px}
+.room-browser button{padding:7px 10px;font-size:12px}
+#room-list{display:grid;gap:6px;margin-top:10px}
+.room-item{display:flex;align-items:center;gap:8px;background:#0d1026;padding:9px 12px;border-radius:10px}
+.room-item b{flex:1;text-align:left;color:#ffe23e}.room-item button{background:#4e54a3}
+#mobile{grid-template-columns:repeat(8,1fr)}
+#fuse-indicator{position:absolute;left:50%;top:-88px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;background:#0c1026f2;padding:7px 14px;border:2px solid #ffffff1c;border-radius:16px;box-shadow:0 10px 30px #0008;transition:.08s transform,.08s filter}
+#fuse-indicator span{font-size:34px}#fuse-indicator i{width:8px;height:8px;border-radius:50%;background:#3a405f}#fuse-indicator i.on{background:#ffbd38;box-shadow:0 0 9px #ff8a31}#fuse-indicator[data-stage="4"] i.on{background:#ff315f;box-shadow:0 0 12px #ff315f}
+#fuse-indicator.pulse{transform:translateX(-50%) scale(1.13);filter:brightness(1.8)}
