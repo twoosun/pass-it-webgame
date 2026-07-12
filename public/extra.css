@@ -1,4 +1,5 @@
-.panel{max-height:96vh;overflow:auto}
+.panel{max-height:96vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
+.panel::-webkit-scrollbar{display:none}
 #create-password,#join-password{margin-top:10px}
 .room-browser{margin-top:20px;padding-top:15px;border-top:1px solid #ffffff18}
 .room-browser>b{display:inline-block;margin-right:10px}
