@@ -2,6 +2,7 @@ services:
   - type: web
     name: pass-it-webgame
     runtime: node
+    plan: free
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /
