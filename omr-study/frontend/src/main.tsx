@@ -81,6 +81,18 @@ function download(data: unknown, name: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+const icons: Record<string, React.ReactNode> = {
+  dashboard: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
+  exams: <><path d="M6 3h12a2 2 0 0 1 2 2v16H4V5a2 2 0 0 1 2-2Z"/><path d="M8 8h8M8 12h8M8 16h5"/></>,
+  new: <><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></>,
+  wrong: <><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></>,
+  retry: <><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></>,
+  stats: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
+  settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>,
+};
+function Icon({ name }: { name: string }) {
+  return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{icons[name]}</svg>;
+}
 function Field({ label, children }: any) {
   return (
     <label className="field">
@@ -135,49 +147,48 @@ function App() {
   if (loading) return <div className="loading">기록을 불러오는 중…</div>;
   if (!user) return <Auth onLogin={setUser} />;
   const menu = [
-    ["dashboard", "◫", "대시보드"],
-    ["exams", "▤", "시험 기록"],
-    ["new", "＋", "새 시험"],
-    ["wrong", "◎", "오답 한눈 보기"],
-    ["retry", "↻", "다시 풀기"],
-    ["stats", "↗", "성적 분석"],
-    ["settings", "⚙", "설정"],
+    ["dashboard", "대시보드"],
+    ["exams", "시험 기록"],
+    ["new", "새 시험"],
+    ["wrong", "오답 노트"],
+    ["retry", "다시 풀기"],
+    ["stats", "성적 분석"],
+    ["settings", "설정"],
   ];
   return (
     <div className="shell">
       <aside>
         <a className="brand" href="#dashboard">
-          <b>O</b>
           <span>
-            OMR Study<small>매일의 기록, 다음의 성장</small>
+            채점록<small>기록이 실력을 만듭니다</small>
           </span>
         </a>
-        <div className="nav-caption">MY STUDY</div>
+        <div className="nav-caption">학습 관리</div>
         <nav>
-          {menu.map(([id, icon, name]) => (
+          {menu.map(([id, name]) => (
             <a
               key={id}
               className={route.split("/")[0] === id ? "active" : ""}
               href={"#" + id}
             >
-              <span>{icon}</span>
-              {name}
+              <Icon name={id} />
+              <span className="nav-label">{name}</span>
             </a>
           ))}
         </nav>
-        <div className="profile">
+        <a className="profile" href="#settings">
           <div className="avatar">{user.username.slice(0, 1)}</div>
           <div>
             <strong>{user.username}</strong>
             <small>나의 공부 기록</small>
           </div>
-        </div>
+        </a>
       </aside>
       <main>
         <header className="topbar">
-          <span>나만의 학습 아카이브</span>
+          <span className="topbar-title">오늘의 공부도 차곡차곡 기록해 보세요.</span>
           <span>
-            {today().replaceAll("-", ".")} <i>기록하는 힘</i>
+            {today().replaceAll("-", ".")} <a className="topbar-user" href="#settings">{user.username}</a>
           </span>
         </header>
         {error && (
@@ -221,7 +232,7 @@ function Auth({ onLogin }: any) {
     <div className="auth">
       <section className="auth-story">
         <div className="brand">
-          <b>O</b> OMR Study
+          채점록
         </div>
         <p className="eyebrow">YOUR STUDY, CLEARLY.</p>
         <h1>
