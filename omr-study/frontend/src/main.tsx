@@ -15,6 +15,27 @@ import "./style.css";
 import { gradingOutcome, gradeQuestion, gradingSummary, applyRecognizedDates } from "./manualGrading";
 
 type Any = Record<string, any>;
+
+function BrandLogo({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className={`brand-logo${compact ? " compact" : ""}`} aria-label="실모실록">
+      <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="4" y="4" width="56" height="56" rx="11" />
+        <rect className="brand-mark-paper" x="11" y="11" width="42" height="42" rx="6" />
+        <path d="M17 18h13M17 43h17M38 18h10v22M38 18v29" />
+        <path d="M20 27l-5 8m5-8 7 8m-9-1h8" />
+        <path className="brand-mark-accent" d="M47 40v8" />
+      </svg>
+      {!compact && (
+        <span className="brand-copy">
+          <span className="brand-name"><b>실</b>모<b>실</b>록</span>
+          <small>실전 모의고사 학습 기록</small>
+        </span>
+      )}
+    </span>
+  );
+}
+
 const labels: Any = { korean: "국어", math: "수학", english: "영어" };
 const states: Any = {
   CORRECT: "정답",
@@ -159,9 +180,7 @@ function App() {
     <div className="shell">
       <aside>
         <a className="brand" href="#dashboard">
-          <span>
-            <span className="brand-name"><b>실</b>모<b>실</b>록</span><small>실전 모의고사 학습 기록</small>
-          </span>
+          <BrandLogo />
         </a>
         <div className="nav-caption">학습 관리</div>
         <nav>
@@ -232,7 +251,7 @@ function Auth({ onLogin }: any) {
     <div className="auth">
       <section className="auth-story">
         <div className="brand">
-          <span className="brand-name"><b>실</b>모<b>실</b>록</span>
+          <BrandLogo />
         </div>
         <p className="eyebrow">YOUR STUDY, CLEARLY.</p>
         <h1>
