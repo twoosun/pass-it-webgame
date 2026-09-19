@@ -1115,6 +1115,8 @@ aside {
   letter-spacing: -1.5px;
 }
 .brand > b { display: none; }
+.brand-name { color: #101c32; font-weight: 800; }
+.brand-name b { color: #2f6db2; font: inherit; }
 .brand small {
   margin-top: 7px;
   color: #657187;
@@ -1291,6 +1293,8 @@ thead th { background: #f3f5f8; color: #34455e; font-weight: 650; }
 .auth { background: #f4f6f9; }
 .auth-story { background: #17345e; color: #d8e2ef; }
 .auth-story .brand { color: #fff; padding: 0; }
+.auth-story .brand-name { color: #fff; }
+.auth-story .brand-name b { color: #8fc0ff; }
 .auth-story h1 { color: #fff; }
 .auth-story > p { color: #bac8d9; }
 .auth-story .eyebrow { color: #b9c9db; }

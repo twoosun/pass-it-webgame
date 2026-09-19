@@ -160,7 +160,7 @@ function App() {
       <aside>
         <a className="brand" href="#dashboard">
           <span>
-            실모실록<small>실전 모의고사 학습 기록</small>
+            <span className="brand-name"><b>실</b>모<b>실</b>록</span><small>실전 모의고사 학습 기록</small>
           </span>
         </a>
         <div className="nav-caption">학습 관리</div>
@@ -232,7 +232,7 @@ function Auth({ onLogin }: any) {
     <div className="auth">
       <section className="auth-story">
         <div className="brand">
-          실모실록
+          <span className="brand-name"><b>실</b>모<b>실</b>록</span>
         </div>
         <p className="eyebrow">YOUR STUDY, CLEARLY.</p>
         <h1>
