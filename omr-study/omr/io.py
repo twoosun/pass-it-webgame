@@ -40,6 +40,24 @@ def load_pages(path):
         yield read_image(path)
 
 
+def read_page(path, page_number):
+    """Read one PDF page without rendering earlier pages on each request."""
+    if Path(path).suffix.lower() != ".pdf":
+        if page_number != 1:
+            raise ValueError("이미지에는 1페이지만 있습니다")
+        return read_image(path)
+    with pymupdf.open(path) as doc:
+        if doc.needs_pass or not 1 <= page_number <= len(doc) <= 30:
+            raise ValueError("PDF 페이지 범위는 1~30입니다")
+        page = doc[page_number - 1]
+        scale = min(3, 2600 / max(page.rect.width, page.rect.height))
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
+        return cv2.cvtColor(
+            np.frombuffer(pix.samples, np.uint8).reshape(pix.height, pix.width, 3),
+            cv2.COLOR_RGB2BGR,
+        )
+
+
 def export_results(results, path):
     path = Path(path)
     if path.suffix.lower() == ".csv":

@@ -184,7 +184,12 @@ def update_exam(e, payload, db):
                 fields["score_value"] = None
             if q.crop_file_id:
                 f = db.get(StoredFile, q.crop_file_id)
-                if not f or f.user_id != e.user_id or f.exam_id not in (None, e.id):
+                if (
+                    not f
+                    or f.kind.startswith("pending:")
+                    or f.user_id != e.user_id
+                    or f.exam_id not in (None, e.id)
+                ):
                     raise HTTPException(422, "다른 기록의 이미지입니다")
                 f.exam_id = e.id
             for key, value in fields.items():
@@ -199,6 +204,11 @@ def update_exam(e, payload, db):
             raise HTTPException(422, "오답 배점 합계는 100점을 넘을 수 없습니다.")
     for file_id in payload.file_ids:
         f = db.get(StoredFile, file_id)
-        if not f or f.user_id != e.user_id or f.exam_id not in (None, e.id):
+        if (
+            not f
+            or f.kind.startswith("pending:")
+            or f.user_id != e.user_id
+            or f.exam_id not in (None, e.id)
+        ):
             raise HTTPException(422, "첨부파일을 찾을 수 없습니다")
         f.exam_id = e.id

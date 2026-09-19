@@ -1,3 +1,4 @@
+import { analyzeUpload, uploadAttachment, exportBackup, importBackup } from "./cloud";
 import type { Question } from "./manualGrading";
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
@@ -809,12 +810,7 @@ function Editor({ id, user, fail }: any) {
     const recognizedDates: (string|null)[] = [];
     try {
       for (const file of Array.from(files)) {
-        const form = new FormData();
-        form.append("file", file);
-        const result = await api("/omr/analyze", {
-          method: "POST",
-          body: form,
-        });
+        const result = await analyzeUpload(file, setMessage);
         next.file_ids = [...new Set([...next.file_ids, ...result.file_ids])];
         for (const page of result.pages) {
           if (page.error) {
@@ -1218,13 +1214,8 @@ function Editor({ id, user, fail }: any) {
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
-                  const form = new FormData();
-                  form.append("file", f);
                   try {
-                    const result = await api("/exams/" + id + "/attachments", {
-                      method: "POST",
-                      body: form,
-                    });
+                    const result = await uploadAttachment(f, id!);
                     setExam({
                       ...exam,
                       files: [
@@ -1772,7 +1763,7 @@ function Settings({ user, setUser, fail }: any) {
         <div className="actions">
           <button
             onClick={() =>
-              api("/export")
+              exportBackup()
                 .then((d) => download(d, "omr-backup.json"))
                 .catch(fail)
             }
@@ -1798,7 +1789,7 @@ function Settings({ user, setUser, fail }: any) {
                 const f = e.target.files?.[0];
                 if (!f) return;
                 try {
-                  const r = await send("/import", JSON.parse(await f.text()));
+                  const r = await importBackup(f);
                   setMessage(`${r.added}개 복원, ${r.skipped}개 중복 건너뜀`);
                 } catch (e) {
                   fail(e);

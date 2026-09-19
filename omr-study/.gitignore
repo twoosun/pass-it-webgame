@@ -11,3 +11,6 @@ config/templates.backup.json
 frontend/.vercel/
 .env
 .env.*
+
+.vercel
+.env*

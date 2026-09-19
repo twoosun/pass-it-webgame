@@ -174,4 +174,4 @@ docs/                       구조 분석과 검증 기록
 
 ## 공개 배포
 
-Vercel 프런트엔드와 영구 저장소가 있는 Python 서버를 연결하는 절차는 [배포 안내](docs/deployment.md)를 참고하세요. 로컬 실행만으로 인터넷에 공개되지는 않습니다.
+Vercel(화면 + Python API)과 Supabase Free(DB + 비공개 파일 저장소)를 연결하는 절차는 [배포 안내](docs/deployment.md)를 참고하세요. 로컬 실행만으로 인터넷에 공개되지는 않습니다.

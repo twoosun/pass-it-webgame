@@ -1,26 +1,63 @@
-# 공개 배포 준비
+# Vercel + Supabase Free 배포
 
-현재 로컬 프로그램은 로그인·OpenCV·SQLite·업로드 파일을 사용하는 통합 앱입니다. Vercel에서는 기존 사이트와 다른 **새 프로젝트**를 만들면 됩니다. 기존 Vercel 프로젝트를 덮어쓰지 않습니다.
+현재 기본 배포 구성은 **Vercel 한 프로젝트(React + Python API)**와 **Supabase Free(PostgreSQL + Private Storage)**입니다. Render는 필요하지 않습니다. 무료 사용량 범위 내 운영을 목표로 하며 한도 초과 시 자동 유료 전환을 설정하지 마세요.
 
-## 준비된 경로
+## 1. Supabase 프로젝트
 
-- 화면: Vercel의 별도 Vite 프로젝트, Root Directory `omr-study/frontend`.
-- Python/저장소: Docker 웹 서비스 + 영구 디스크. 기존 `Dockerfile`로 프런트까지 포함한 통합 서비스도 실행할 수 있습니다.
-- Vercel `/api/*`는 Python 서버로 외부 rewrite합니다. 브라우저는 같은 Vercel 주소로 로그인/파일 요청을 보내므로 쿠키를 별도 도메인에 공유할 필요가 없습니다.
-- Python 서버의 `OMR_PUBLIC_ORIGIN`은 실제 공개 Vercel origin 하나만 지정합니다. `OMR_HTTPS=1`로 Secure 세션 쿠키를 사용합니다.
-- SQLite와 업로드 파일은 `OMR_DATA_DIR`에 저장하고 반드시 영구 디스크에 연결합니다. 서버 재배포 때 날아가는 임시 파일시스템에 기록을 보관하지 않습니다.
+1. https://supabase.com/dashboard 에서 Free 프로젝트를 생성합니다. 가능하면 Seoul 지역을 선택합니다.
+2. Storage에서 `omr-private` 버킷을 만듭니다. **Public은 끄고**, 파일 크기 제한은 30MB로 설정합니다. 공개 접근 정책은 추가하지 않습니다.
+3. 프로젝트의 Connect → Transaction pooler 연결 문자열을 확인합니다. `postgresql://postgres.<ref>:<password>@...pooler.supabase.com:6543/postgres?sslmode=require` 형식입니다. 비밀번호에 특수문자가 있으면 URL 인코딩합니다.
+4. Project URL과 서버 전용 `service_role` 키를 확인합니다. 이 키는 브라우저 코드에 넣거나 채팅/Git에 올리지 않습니다.
 
-## 배포 순서
+## 2. Vercel 프로젝트
 
-1. 호스팅 계정을 연결하고 Python 서버/영구 저장소를 마련합니다. `deploy/render.yaml`은 별도의 Render 서비스 설정 예시입니다. 이 구성의 서버·디스크는 유료이므로 비용 승낙 없이 생성하지 않습니다.
-2. 서버의 `/api/health`가 `{"ok":true,"service":"omr-study"}`를 반환하는지 확인합니다.
-3. 프로젝트 폴더에서 `python deploy/prepare_vercel.py "실제 Python 서버 HTTPS 주소"`를 실행합니다. 상태 확인에 성공한 실제 주소로만 `frontend/vercel.json`을 생성합니다.
-4. Vercel에서 새 프로젝트를 만들고 Root Directory를 `omr-study/frontend`로 지정합니다. Build Command는 `npm run build`, Output Directory는 `dist`입니다.
-5. 배포된 Vercel origin을 Python 서버의 `OMR_PUBLIC_ORIGIN`에 설정합니다.
-6. 공개 주소에서 회원가입 → OMR 업로드 → 날짜 확인 → 모두 정답 → 오답 체크/배점 → 저장 → 다시 조회를 확인합니다.
+- 기존 사이트와 별도 프로젝트를 생성합니다.
+- 저장소: `twoosun/pass-it-webgame`
+- 소스 브랜치: `deploy/omr-study` (현재 main에는 OMR 코드가 없습니다.)
+- **Root Directory: `omr-study`** — `omr-study/frontend`가 아닙니다.
+- Framework Preset: Other
+- 코드의 `vercel.json`이 설치/빌드/출력 폴더/API 경로를 지정합니다. 별도 Render 주소나 API 프록시가 필요하지 않습니다.
+- 자동 Git 배포는 연결 설정 전 실패하는 배포를 방지하도록 꺼 두었습니다. 최초 배포는 CLI/API로 수행합니다. 환경변수 검증 후 자동 배포를 원하면 `vercel.json`의 `git.deploymentEnabled`를 변경합니다.
+- Fluid Compute를 활성화합니다. 페이지별 함수 최대 실행 시간은 300초입니다.
+- Hobby 계정의 비상업적 개인 사용 및 무료 한도에 맞게 사용합니다.
 
-서버를 Vercel Python Functions에 직접 배포하는 방식을 선택한다면 SQLite/로컬 파일 보관을 PostgreSQL/객체 저장소로 교체하고, 업로드 크기 및 실행 제약에 맞게 업로드 경로를 추가 변경해야 합니다. 현재 코드를 정적 화면만 올려서 전체 서비스가 배포된 것으로 보고하지 않습니다.
+Vercel 프로젝트의 Environment Variables에 다음 값을 등록합니다. 서버용 이름을 그대로 사용하며 `VITE_` 접두사를 붙이지 않습니다.
 
-실제 업로드/DB/비밀번호/세션은 Git 또는 Vercel 프런트 빌드에 포함하지 않습니다. `.gitignore`와 `.dockerignore`를 적용한 소스만 사용합니다.
+| 이름 | 값 |
+|---|---|
+| `DATABASE_URL` | Supabase transaction pooler PostgreSQL 연결 문자열, SSL 포함 |
+| `SUPABASE_URL` | Supabase 프로젝트 HTTPS URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service_role 키 |
+| `SUPABASE_BUCKET` | `omr-private` |
 
-참고: [Vercel 프로젝트 제한](https://vercel.com/docs/limits), [외부 rewrite](https://vercel.com/docs/routing/rewrites), [Render 영구 디스크](https://render.com/docs/disks).
+Production에 등록합니다. Preview에도 연결하면 같은 DB를 사용할 수 있으므로 필요할 때만 선택하세요. 별도 도메인을 연결한 경우 `OMR_PUBLIC_ORIGIN`에 그 HTTPS origin을 설정합니다. Vercel 기본 배포/프로덕션 도메인은 자동 허용합니다.
+
+Vercel CLI로 로컬에서 배포할 때도 작업 폴더는 `omr-study`입니다. 최초 로그인 및 새 프로젝트 연결은 계정 소유자가 수행해야 합니다. 유료 업그레이드는 필요 시 별도로 결정하며 이 구성에서 자동 생성하지 않습니다.
+
+## 동작과 보관
+
+- PostgreSQL의 비공개 `omr` 스키마에 로그인·시험·채점·파일 메타데이터를 보관합니다. 서버 시작 시 advisory lock으로 테이블 생성/추가 컬럼 마이그레이션을 직렬화합니다.
+- Vercel에 DB 설정이 없으면 임시 SQLite로 조용히 대체하지 않고 시작을 거절합니다.
+- 로그인한 사용자가 일회 업로드용 경로를 발급받아 Storage에 직접 전송합니다. 다운로드는 소유권을 확인한 뒤 5분짜리 URL로 전달합니다. Public 버킷은 거절합니다.
+- 원본 크기를 서버에서 재확인하고 파일 형식을 검사한 뒤 완료 처리합니다. PDF는 1~30페이지, 파일당 30MB까지입니다.
+- PDF를 한 페이지씩 요청하므로 전체 30페이지 분석을 한 함수 실행에 몰아넣지 않습니다. `/tmp`는 처리 중에만 사용하고 요청 후 제거합니다.
+- 백업은 파일들을 브라우저로 개별 다운로드해 기존 JSON 형식으로 조립합니다. 복구는 이미지들을 직접 업로드한 뒤 시험별 메타데이터를 저장합니다. 대용량 이미지를 함수 요청/응답 본문에 넣지 않습니다.
+- 기존 로컬 기록은 설정 → JSON 백업으로 내보내고 공개 사이트에서 복구합니다.
+
+## 공개 후 검증
+
+`/api/health` 확인 → 회원가입 → 실제 OMR 업로드 → 날짜/단답형 확인 → 일괄 정답 → 일부 오답과 배점 입력 → 저장 → 재로그인 → 이미지/기록 조회 → JSON 백업·복구를 확인합니다. 재배포 뒤에도 같은 기록과 사진이 열려야 합니다.
+
+현재 로컬 자동 테스트는 외부 Storage HTTP를 모의 서비스로 검증합니다. 실제 Vercel 런타임, Supabase PostgreSQL 연결 및 공개 업로드는 계정 연결 후 검증해야 합니다. Linux용 Python 의존성 다운로드 성공만으로 실제 배포 성공을 의미하지 않습니다.
+
+## 참고
+
+- https://vercel.com/docs/functions/limitations
+- https://vercel.com/docs/functions/runtimes/python
+- https://supabase.com/docs/guides/database/connecting-to-postgres
+- https://supabase.com/docs/guides/troubleshooting/using-sqlalchemy-with-supabase-FUqebT
+- https://supabase.com/pricing
+
+`deploy/render.yaml`은 이전의 선택 가능한 유료 서버 예시이며 현재 Vercel 배포에는 사용하지 않습니다.
+
+로컬 `.env.vercel.local`에 네 값을 입력하고 `python deploy/configure_vercel.py`를 실행하면 Supabase 연결과 비공개 버킷을 확인하고 Vercel의 `omr-study` 프로젝트에 Production 서버 환경변수로 등록합니다. 버킷이 없으면 비공개로 생성합니다. 이 스크립트는 키를 출력하지 않습니다.

@@ -3,7 +3,7 @@ from uuid import uuid4
 from functools import lru_cache
 import base64, csv, hashlib, hmac, io, json, os, secrets, time, threading
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from .database import (
     SessionLocal,
@@ -18,6 +18,7 @@ from .database import (
 )
 from .schemas import Credentials, ExamInput, ReviewPatch
 from .service import exam_json, question_json, update_exam, outcome
+from . import storage
 
 app = FastAPI(title="OMR Study", version="1.0.0")
 OMR_LOCK = threading.Lock()
@@ -52,6 +53,10 @@ async def same_origin(request, call_next):
     public_origin = os.getenv("OMR_PUBLIC_ORIGIN", "").rstrip("/")
     if public_origin:
         allowed_origins.add(public_origin)
+    if os.getenv("VERCEL") == "1":
+        for key in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
+            if os.getenv(key):
+                allowed_origins.add("https://" + os.environ[key])
     if (
         request.method not in ("GET", "HEAD", "OPTIONS")
         and origin
@@ -68,6 +73,7 @@ async def same_origin(request, call_next):
 
 @app.get("/api/health")
 def health():
+    storage.remote_enabled()
     return {"ok": True, "service": "omr-study"}
 
 
@@ -99,7 +105,7 @@ def login_cookie(user, response, db):
         token,
         httponly=True,
         samesite="strict",
-        secure=os.getenv("OMR_HTTPS") == "1",
+        secure=os.getenv("OMR_HTTPS") == "1" or os.getenv("VERCEL") == "1",
         max_age=30 * 86400,
     )
 
@@ -264,9 +270,7 @@ def delete_exam(exam_id: str, user=Depends(current_user), db=Depends(db_session)
     db.delete(e)
     db.commit()
     for path in paths:
-        p = (DATA / path).resolve()
-        if p.is_relative_to(DATA.resolve()):
-            p.unlink(missing_ok=True)
+        storage.delete(path)
     return {"ok": True}
 
 
@@ -382,7 +386,7 @@ def save_file(path, user, db, kind, filename=None, exam_id=None):
         user_id=user.id,
         exam_id=exam_id,
         filename=filename or path.name,
-        path=path.relative_to(DATA).as_posix(),
+        path=storage.persist(path),
         kind=kind,
     )
     db.add(f)
@@ -414,16 +418,22 @@ def receive_file(file, user, db, kind):
 def analyze(
     file: UploadFile = File(...), user=Depends(current_user), db=Depends(db_session)
 ):
+    if storage.remote_enabled():
+        raise HTTPException(409, "직접 업로드 후 페이지별 분석을 이용하세요.")
     path, original = receive_file(file, user, db, "original")
     try:
         with OMR_LOCK:
             results = omr_engine().analyze_file(path, path.parent / "debug")
     except Exception as exc:
         raise HTTPException(422, f"파일을 분석할 수 없습니다: {exc}") from exc
+    return persist_results(results, path.parent / "debug", original, user, db)
+
+
+def persist_results(results, debug_root, original, user, db):
     all_files = [original.id]
     for i, result in enumerate(results):
         result["files"] = {}
-        directory = path.parent / "debug" / f"page_{i + 1}"
+        directory = debug_root / f"page_{result.get('page', i + 1)}"
         for image in directory.glob("*.png"):
             f = save_file(
                 image,
@@ -448,6 +458,8 @@ def attachment(
     user=Depends(current_user),
     db=Depends(db_session),
 ):
+    if storage.remote_enabled():
+        raise HTTPException(409, "직접 업로드를 이용하세요.")
     owned_exam(exam_id, user, db)
     _, f = receive_file(file, user, db, "attachment")
     f.exam_id = exam_id
@@ -460,6 +472,12 @@ def file_content(file_id: str, user=Depends(current_user), db=Depends(db_session
     f = db.query(StoredFile).filter_by(id=file_id, user_id=user.id).first()
     if not f:
         raise HTTPException(404, "파일을 찾을 수 없습니다")
+    if f.kind.startswith("pending:"):
+        raise HTTPException(404, "업로드가 완료되지 않았습니다")
+    if f.path.startswith("supabase:"):
+        return RedirectResponse(
+            storage.signed_url(f.path.removeprefix("supabase:")), status_code=307
+        )
     path = (DATA / f.path).resolve()
     if not path.is_relative_to(DATA.resolve()) or not path.is_file():
         raise HTTPException(404, "파일을 찾을 수 없습니다")
@@ -543,6 +561,7 @@ def export(
     format: str = "json",
     subject: str = "",
     wrong_only: bool = False,
+    manifest: bool = False,
     user=Depends(current_user),
     db=Depends(db_session),
 ):
@@ -553,17 +572,18 @@ def export(
         for f in db.query(StoredFile).filter_by(user_id=user.id).all():
             if f.id not in ids:
                 continue
-            path = (DATA / f.path).resolve()
-            if path.is_relative_to(DATA.resolve()) and path.is_file():
-                files.append(
-                    {
-                        "id": f.id,
-                        "filename": f.filename,
-                        "kind": f.kind,
-                        "extension": path.suffix,
-                        "data": base64.b64encode(path.read_bytes()).decode(),
-                    }
-                )
+            entry = {
+                "id": f.id,
+                "filename": f.filename,
+                "kind": f.kind,
+                "extension": Path(f.path).suffix,
+            }
+            if manifest:
+                entry["url"] = "/api/files/" + f.id
+            else:
+                with storage.materialize(f.path) as path:
+                    entry["data"] = base64.b64encode(path.read_bytes()).decode()
+            files.append(entry)
         return {"version": 1, "exams": records, "files": files}
     output = io.StringIO()
     writer = csv.writer(output)
@@ -660,6 +680,30 @@ def import_backup(data: dict, user=Depends(current_user), db=Depends(db_session)
             entry = file_payloads.get(old_file_id)
             if not entry:
                 continue
+            if entry.get("stored_file_id"):
+                stored = (
+                    db.query(StoredFile)
+                    .filter_by(
+                        id=str(entry["stored_file_id"]),
+                        user_id=user.id,
+                        kind="backup-asset",
+                        exam_id=None,
+                    )
+                    .first()
+                )
+                if not stored:
+                    raise HTTPException(422, "복구용 업로드 파일을 찾을 수 없습니다")
+                stored.kind = (
+                    entry.get("kind")
+                    if entry.get("kind") in ("original", "attachment", "crop", "debug")
+                    else "attachment"
+                )
+                stored.filename = Path(entry.get("filename", stored.filename)).name[
+                    :200
+                ]
+                restored_files[old_file_id] = stored.id
+                clean["file_ids"].append(stored.id)
+                continue
             extension = entry.get("extension", "").lower()
             if extension not in (".png", ".jpg", ".jpeg", ".pdf"):
                 raise HTTPException(422, "허용되지 않는 백업 파일 형식")
@@ -681,6 +725,8 @@ def import_backup(data: dict, user=Depends(current_user), db=Depends(db_session)
                 entry.get("kind", "attachment"),
                 Path(entry.get("filename", "restored" + extension)).name,
             )
+            if storage.remote_enabled():
+                path.unlink(missing_ok=True)
             restored_files[old_file_id] = f.id
             clean["file_ids"].append(f.id)
         for s in clean.get("subjects", []):
@@ -701,6 +747,10 @@ def import_backup(data: dict, user=Depends(current_user), db=Depends(db_session)
         "note": "답안, 복습 기록 및 첨부파일 복원 완료.",
     }
 
+
+from .cloud import register_routes
+
+register_routes(app)
 
 frontend = ROOT / "frontend/dist"
 if frontend.exists():

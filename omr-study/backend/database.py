@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import tempfile
 from sqlalchemy import (
     create_engine,
     String,
@@ -11,7 +12,9 @@ from sqlalchemy import (
     Boolean,
     inspect,
     text,
+    MetaData,
 )
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -21,17 +24,37 @@ from sqlalchemy.orm import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = Path(os.environ.get("OMR_DATA_DIR", ROOT / "data"))
+IS_VERCEL = os.getenv("VERCEL") == "1"
+DATA = Path(
+    os.environ.get(
+        "OMR_DATA_DIR",
+        Path(tempfile.gettempdir()) / "omr-study" if IS_VERCEL else ROOT / "data",
+    )
+)
 DATA.mkdir(parents=True, exist_ok=True)
+if IS_VERCEL and not os.getenv("DATABASE_URL"):
+    raise RuntimeError(
+        "Vercel requires DATABASE_URL; temporary SQLite is not persistent"
+    )
 url = os.environ.get("DATABASE_URL", f"sqlite:///{(DATA / 'app.db').as_posix()}")
+if url.startswith(("postgres://", "postgresql://")):
+    url = "postgresql+psycopg://" + url.split("://", 1)[1]
+IS_POSTGRES = url.startswith("postgresql")
+if IS_VERCEL and not IS_POSTGRES:
+    raise RuntimeError("Vercel requires persistent PostgreSQL")
 engine = create_engine(
-    url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {}
+    url,
+    connect_args={"check_same_thread": False}
+    if url.startswith("sqlite")
+    else {"prepare_threshold": None, "connect_timeout": 15},
+    **({"poolclass": NullPool} if IS_POSTGRES else {}),
 )
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
-    pass
+    # Keep application tables outside Supabase's exposed public API schema.
+    metadata = MetaData(schema="omr" if IS_POSTGRES else None)
 
 
 class User(Base):
@@ -117,12 +140,9 @@ class StoredFile(Base):
     kind: Mapped[str] = mapped_column(String)
 
 
-Base.metadata.create_all(engine)
-
-
-def migrate_manual_grading():
+def migrate_manual_grading(connection):
     """Additive migration preserves existing accounts, answers, and attachments."""
-    inspector = inspect(engine)
+    inspector = inspect(connection)
     additions = {
         "questions": {"grading_status": "VARCHAR"},
         "exams": {
@@ -130,14 +150,24 @@ def migrate_manual_grading():
             "date_recognition": "VARCHAR DEFAULT ''",
         },
     }
-    with engine.begin() as connection:
-        for table, fields in additions.items():
-            existing = {column["name"] for column in inspector.get_columns(table)}
-            for name, definition in fields.items():
-                if name not in existing:
-                    connection.execute(
-                        text(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
-                    )
+    for table, fields in additions.items():
+        existing = {
+            column["name"]
+            for column in inspector.get_columns(table, schema=Base.metadata.schema)
+        }
+        target = f"omr.{table}" if IS_POSTGRES else table
+        for name, definition in fields.items():
+            if name not in existing:
+                connection.execute(
+                    text(f"ALTER TABLE {target} ADD COLUMN {name} {definition}")
+                )
 
 
-migrate_manual_grading()
+with engine.begin() as connection:
+    if IS_POSTGRES:
+        # Serialize cold-start schema creation across serverless instances.
+        connection.execute(text("SELECT pg_advisory_xact_lock(614230917)"))
+        connection.execute(text("CREATE SCHEMA IF NOT EXISTS omr"))
+        connection.execute(text("REVOKE ALL ON SCHEMA omr FROM PUBLIC"))
+    Base.metadata.create_all(connection)
+    migrate_manual_grading(connection)
