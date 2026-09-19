@@ -93,8 +93,9 @@ def subject_json(s):
     }
 
 
-def exam_json(e, db):
-    files = db.query(StoredFile).filter_by(exam_id=e.id, user_id=e.user_id).all()
+def exam_json(e, db, files=None):
+    if files is None:
+        files = db.query(StoredFile).filter_by(exam_id=e.id, user_id=e.user_id).all()
     return {
         **{
             k: getattr(e, k)

@@ -5,6 +5,7 @@ import base64, csv, hashlib, hmac, io, json, os, secrets, time, threading
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import selectinload, joinedload
 from .database import (
     SessionLocal,
     User,
@@ -192,7 +193,11 @@ def exams(
     user=Depends(current_user),
     db=Depends(db_session),
 ):
-    query = db.query(Exam).filter_by(user_id=user.id)
+    query = (
+        db.query(Exam)
+        .options(selectinload(Exam.subjects).selectinload(Subject.questions))
+        .filter_by(user_id=user.id)
+    )
     if search:
         query = query.filter(Exam.name.contains(search))
     if exam_type:
@@ -201,7 +206,18 @@ def exams(
         query = query.filter(Exam.exam_date >= date_from)
     if date_to:
         query = query.filter(Exam.exam_date <= date_to)
-    rows = [exam_json(e, db) for e in query.all()]
+    records = query.all()
+    files_by_exam = {e.id: [] for e in records}
+    if files_by_exam:
+        for file in (
+            db.query(StoredFile)
+            .filter(
+                StoredFile.user_id == user.id, StoredFile.exam_id.in_(files_by_exam)
+            )
+            .all()
+        ):
+            files_by_exam[file.exam_id].append(file)
+    rows = [exam_json(e, db, files=files_by_exam[e.id]) for e in records]
     if subject:
         rows = [e for e in rows if any(s["subject"] == subject for s in e["subjects"])]
 
@@ -303,6 +319,7 @@ def wrong_answers(
     result = []
     for q in (
         db.query(Question)
+        .options(joinedload(Question.subject_record).joinedload(Subject.exam))
         .join(Subject)
         .join(Exam)
         .filter(Exam.user_id == user.id)

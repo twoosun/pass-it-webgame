@@ -338,15 +338,20 @@ function Heading({ eyebrow, title, description, action }: any) {
 }
 function Dashboard({ fail }: any) {
   const [exams, setExams] = useState<Any[]>([]),
-    [wrong, setWrong] = useState<Any[]>([]);
+    [wrong, setWrong] = useState<Any[]>([]),
+    [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(false);
   useEffect(() => {
     Promise.all([api("/exams"), api("/wrong-answers")])
       .then(([e, w]) => {
         setExams(e);
         setWrong(w);
       })
-      .catch(fail);
+      .catch((error) => { setLoadError(true); fail(error); })
+      .finally(() => setLoading(false));
   }, []);
+  if (loading) return <section className="panel" role="status">시험 기록을 불러오는 중입니다…</section>;
+  if (loadError) return <section className="panel" role="alert">기록을 불러오지 못했습니다. <button onClick={() => location.reload()}>다시 불러오기</button></section>;
   return (
     <>
       <Heading
@@ -512,6 +517,8 @@ function ExamCard({ exam: e }: any) {
 }
 function ExamList({ fail }: any) {
   const [data, setData] = useState<Any[]>([]),
+    [loading, setLoading] = useState(true),
+    [loadError, setLoadError] = useState(false),
     [search, setSearch] = useState(""),
     [subject, setSubject] = useState(""),
     [kind, setKind] = useState(""),
@@ -520,6 +527,9 @@ function ExamList({ fail }: any) {
     [to, setTo] = useState(""),
     [compare, setCompare] = useState<string[]>([]);
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError(false);
     const t = setTimeout(
       () =>
         api(
@@ -533,11 +543,12 @@ function ExamList({ fail }: any) {
               date_to: to,
             }),
         )
-          .then(setData)
-          .catch(fail),
+          .then((records) => { if (active) setData(records); })
+          .catch((error) => { if (active) { setLoadError(true); fail(error); } })
+          .finally(() => { if (active) setLoading(false); }),
       180,
     );
-    return () => clearTimeout(t);
+    return () => { active = false; clearTimeout(t); };
   }, [search, subject, kind, sort, from, to]);
   return (
     <>
@@ -612,10 +623,10 @@ function ExamList({ fail }: any) {
       </div>
       <section className="panel">
         <div className="section-title">
-          <h2>{data.length}개의 기록</h2>
+          <h2>{loading ? "기록 불러오는 중…" : loadError ? "기록 조회 실패" : `${data.length}개의 기록`}</h2>
           <span className="muted">두 시험을 체크하면 비교할 수 있어요.</span>
         </div>
-        {data.map((e) => (
+        {!loading && !loadError && data.map((e) => (
           <div className="compare-row" key={e.id}>
             <input
               aria-label={e.name + " 비교 선택"}
@@ -632,7 +643,9 @@ function ExamList({ fail }: any) {
             <ExamCard exam={e} />
           </div>
         ))}
-        {!data.length && <Empty>조건에 맞는 시험이 없어요</Empty>}
+        {loading && <p role="status">시험 기록을 불러오고 있습니다. 잠시만 기다려 주세요.</p>}
+        {loadError && <p role="alert">기록을 불러오지 못했습니다. <button onClick={() => location.reload()}>다시 불러오기</button></p>}
+        {!loading && !loadError && !data.length && <Empty>조건에 맞는 시험이 없어요</Empty>}
       </section>
       {compare.length === 2 && (
         <section className="panel">
