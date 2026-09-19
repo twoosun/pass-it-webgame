@@ -539,7 +539,7 @@ function ExamCard({ exam: e }: any) {
         </h3>
         {e.subjects.length ? <div className="exam-subjects">
           {e.subjects.map((s: Any) => <span key={s.subject}>
-            <b>{labels[s.subject]}</b><strong>{s.display_score ?? "—"}<small>{s.display_score == null ? "미채점" : "점"}</small></strong><em>오답 {s.wrong_count}</em>
+            <b>{labels[s.subject]}</b><strong>{s.display_score ?? "—"}<small>{s.display_score == null ? "미채점" : "점"}</small></strong><em>{s.grade ? `${s.grade}등급 · ` : ""}오답 {s.wrong_count}</em>
           </span>)}
         </div> : <p>OMR 업로드를 기다리고 있어요</p>}
         {e.subjects.some((s: Any) => s.wrong_count > 0) && (
@@ -1189,10 +1189,25 @@ function Editor({ id, user, fail }: any) {
               {summary.missing.length>0 && <p className="notice">오답 배점 입력 필요: {summary.missing.join(', ')}번</p>}
               {summary.invalid && <p className="error">오답 배점 합계는 0~100점이어야 합니다.</p>}
               <div className="form-grid">
+                <Field label="등급 (선택)">
+                  <select
+                    value={subject.grade ?? ""}
+                    onChange={(e) =>
+                      changeSubject(
+                        "grade",
+                        e.target.value === "" ? null : Number(e.target.value),
+                      )
+                    }
+                  >
+                    <option value="">입력 안 함</option>
+                    {Array.from({ length: 9 }, (_, index) => index + 1).map((grade) => (
+                      <option key={grade} value={grade}>{grade}등급</option>
+                    ))}
+                  </select>
+                </Field>
                 {[
                   ["standard_score", "표준점수"],
                   ["percentile", "백분위"],
-                  ["grade", "등급"],
                   ["duration", "풀이 시간 (분)"],
                   ["first_pass", "1바퀴 (분)"],
                 ].map(([k, l]) => (
