@@ -60,4 +60,4 @@ Vercel CLI로 로컬에서 배포할 때도 작업 폴더는 `omr-study`입니�
 
 `deploy/render.yaml`은 이전의 선택 가능한 유료 서버 예시이며 현재 Vercel 배포에는 사용하지 않습니다.
 
-로컬 `.env.vercel.local`에 네 값을 입력하고 `python deploy/configure_vercel.py`를 실행하면 Supabase 연결과 비공개 버킷을 확인하고 Vercel의 `omr-study` 프로젝트에 Production 서버 환경변수로 등록합니다. 버킷이 없으면 비공개로 생성합니다. 이 스크립트는 키를 출력하지 않습니다.
+로컬 `.env.vercel.local`에 네 값을 입력하고 `python deploy/configure_vercel.py`를 실행하면 Supabase 연결과 비공개 버킷을 확인하고 Vercel의 `silsil` 프로젝트에 Production 서버 환경변수로 등록합니다. 버킷이 없으면 비공개로 생성합니다. 이 스크립트는 키를 출력하지 않습니다.

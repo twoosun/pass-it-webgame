@@ -21,7 +21,7 @@ from .schemas import Credentials, ExamInput, ReviewPatch
 from .service import exam_json, question_json, update_exam, outcome
 from . import storage
 
-app = FastAPI(title="OMR Study", version="1.0.0")
+app = FastAPI(title="실모실록", version="1.0.0")
 OMR_LOCK = threading.Lock()
 
 

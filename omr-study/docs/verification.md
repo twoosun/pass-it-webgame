@@ -46,7 +46,7 @@ Python 문법/import 검사와 Ruff의 오류 검사(F 규칙), TypeScript 검�
 
 ## 실제 공개 배포 검증 (2026-09-19)
 
-- 공개 주소: https://omr-study.vercel.app
+- 최초 공개 주소: https://omr-study.vercel.app (현재 프로젝트명 변경 후 https://silsil.vercel.app)
 - Vercel Hobby 프로젝트에서 실제 Production 배포가 READY 상태로 완료됐습니다. Python 빌드 로그의 최적화 전 번들은 345.46MB였고 배포에 성공했습니다.
 - Supabase PostgreSQL 연결, `omr` 스키마 초기화 및 비공개 Storage 연결을 확인했습니다.
 - 공개 홈페이지/API 상태 확인, 신규 회원가입, 5MiB PNG 직접 업로드, 원본 검증, 페이지별 분석을 HTTP로 통과했습니다.

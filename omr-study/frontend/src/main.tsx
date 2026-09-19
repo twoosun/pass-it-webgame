@@ -160,7 +160,7 @@ function App() {
       <aside>
         <a className="brand" href="#dashboard">
           <span>
-            채점록<small>기록이 실력을 만듭니다</small>
+            실모실록<small>실전 모의고사 학습 기록</small>
           </span>
         </a>
         <div className="nav-caption">학습 관리</div>
@@ -232,7 +232,7 @@ function Auth({ onLogin }: any) {
     <div className="auth">
       <section className="auth-story">
         <div className="brand">
-          채점록
+          실모실록
         </div>
         <p className="eyebrow">YOUR STUDY, CLEARLY.</p>
         <h1>
@@ -347,6 +347,52 @@ function Heading({ eyebrow, title, description, action }: any) {
     </div>
   );
 }
+function StudyCalendar({ exams }: { exams: Any[] }) {
+  const initial = exams.find((exam) => exam.exam_date)?.exam_date || today();
+  const [month, setMonth] = useState(() => initial.slice(0, 7));
+  const [year, monthNumber] = month.split("-").map(Number);
+  const firstDay = new Date(year, monthNumber - 1, 1).getDay();
+  const lastDate = new Date(year, monthNumber, 0).getDate();
+  const dates = new Map<string, Any[]>();
+  for (const exam of exams) {
+    if (!exam.exam_date?.startsWith(month)) continue;
+    dates.set(exam.exam_date, [...(dates.get(exam.exam_date) || []), exam]);
+  }
+  const move = (offset: number) => {
+    const next = new Date(year, monthNumber - 1 + offset, 1);
+    setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`);
+  };
+  return (
+    <section className="panel calendar-panel">
+      <div className="section-title calendar-title">
+        <h2>학습 달력</h2>
+        <div className="calendar-controls">
+          <button aria-label="이전 달" onClick={() => move(-1)}>‹</button>
+          <strong>{year}년 {monthNumber}월</strong>
+          <button aria-label="다음 달" onClick={() => move(1)}>›</button>
+        </div>
+      </div>
+      <div className="calendar-weekdays">
+        {["일", "월", "화", "수", "목", "금", "토"].map((day) => <span key={day}>{day}</span>)}
+      </div>
+      <div className="calendar-grid">
+        {Array.from({ length: firstDay }, (_, index) => <span key={`blank-${index}`} />)}
+        {Array.from({ length: lastDate }, (_, index) => {
+          const day = index + 1;
+          const date = `${month}-${String(day).padStart(2, "0")}`;
+          const records = dates.get(date) || [];
+          const current = date === today();
+          return (
+            <span className={`${records.length ? "recorded" : ""} ${current ? "today" : ""}`} key={date} title={records.map((exam) => exam.name).join(", ")}>
+              <b>{day}</b>{records.length > 0 && <i>{records.length}</i>}
+            </span>
+          );
+        })}
+      </div>
+      <p className="calendar-legend"><i /> 실모 기록이 있는 날 <span>{dates.size}일</span></p>
+    </section>
+  );
+}
 function Dashboard({ fail }: any) {
   const [exams, setExams] = useState<Any[]>([]),
     [wrong, setWrong] = useState<Any[]>([]),
@@ -422,37 +468,24 @@ function Dashboard({ fail }: any) {
               : "OMR을 업로드하면 답안을 자동으로 읽어드려요."}
           </div>
         </section>
-        <section className="panel">
-          <div className="section-title">
-            <h2>다시 살펴볼 문제</h2>
-            <a href="#retry">복습하기 →</a>
-          </div>
-          <div className="review-count">
-            <strong>
-              {wrong.filter((q) => q.review_status === "미복습").length}
-            </strong>
-            <span>미복습 오답</span>
-            <strong>
-              {wrong.filter((q) => q.review_status === "다시 볼 문제").length}
-            </strong>
-            <span>다시 볼 문제</span>
-          </div>
-          {wrong.length ? (
-            wrong.slice(0, 5).map((q) => (
+        <div className="dashboard-side">
+          <StudyCalendar exams={exams} />
+          <section className="panel">
+            <div className="section-title">
+              <h2>다시 살펴볼 문제</h2>
+              <a href="#retry">복습하기 →</a>
+            </div>
+            <div className="review-count">
+              <strong>{wrong.filter((q) => q.review_status === "미복습").length}</strong><span>미복습 오답</span>
+              <strong>{wrong.filter((q) => q.review_status === "다시 볼 문제").length}</strong><span>다시 볼 문제</span>
+            </div>
+            {wrong.length ? wrong.slice(0, 3).map((q) => (
               <a className="recent-wrong" key={q.id} href={"#wrong/" + q.id}>
-                <b>
-                  {labels[q.subject]} {q.number}번
-                </b>
-                <span>
-                  {q.exam_name} {q.round}
-                </span>
-                <small>{states[q.outcome]} →</small>
+                <b>{labels[q.subject]} {q.number}번</b><span>{q.exam_name} {q.round}</span><small>{states[q.outcome]} →</small>
               </a>
-            ))
-          ) : (
-            <Empty>복습할 오답이 없어요</Empty>
-          )}
-        </section>
+            )) : <Empty>복습할 오답이 없어요</Empty>}
+          </section>
+        </div>
       </div>
       <section className="panel">
         <h2>최근 5회 성적</h2>
@@ -496,14 +529,11 @@ function ExamCard({ exam: e }: any) {
         <h3>
           {e.name} <small>{e.round}</small>
         </h3>
-        <p>
-          {e.subjects
-            .map(
-              (s: Any) =>
-                `${labels[s.subject]} ${s.display_score ?? "미채점"} · 오답 ${s.wrong_count}개`,
-            )
-            .join(" / ") || "OMR 업로드를 기다리고 있어요"}
-        </p>
+        {e.subjects.length ? <div className="exam-subjects">
+          {e.subjects.map((s: Any) => <span key={s.subject}>
+            <b>{labels[s.subject]}</b><strong>{s.display_score ?? "—"}<small>{s.display_score == null ? "미채점" : "점"}</small></strong><em>오답 {s.wrong_count}</em>
+          </span>)}
+        </div> : <p>OMR 업로드를 기다리고 있어요</p>}
         {e.subjects.some((s: Any) => s.wrong_count > 0) && (
           <p className="wrong-numbers">
             {e.subjects

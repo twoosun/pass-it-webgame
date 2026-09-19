@@ -49,8 +49,8 @@ def read_settings():
 def configure():
     values = read_settings()
     link = json.loads((ROOT / ".vercel/project.json").read_text())
-    if link.get("projectName") != "omr-study":
-        raise ConfigurationError("The linked Vercel project must be omr-study")
+    if link.get("projectName") != "silsil":
+        raise ConfigurationError("The linked Vercel project must be silsil")
     auth_path = (
         Path(os.environ.get("APPDATA", Path.home() / ".local/share"))
         / "com.vercel.cli/Data/auth.json"
@@ -120,7 +120,7 @@ def configure():
             json=body,
         )
         response.raise_for_status()
-        print("Registered 4 server-only production variables in omr-study.")
+        print("Registered 4 server-only production variables in silsil.")
 
 
 if __name__ == "__main__":

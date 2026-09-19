@@ -1,8 +1,8 @@
-# OMR Study
+# 실모실록
 
 제공된 **2026학년도 수능 답안지 PDF의 1~3페이지**를 기준으로 만든 국어·수학·영어 OMR 인식 프로그램입니다. Python OpenCV 엔진을 tkinter 데스크톱과 FastAPI/React 웹이 공유합니다. 원본 프로젝트와 독립적인 `omr-study` 폴더에 구성했습니다.
 
-공개 사이트: **https://omr-study.vercel.app** (Vercel + Supabase). 새 계정을 만들어 사용할 수 있습니다. 로컬 기록은 JSON 백업·복구로 옮깁니다.
+공개 사이트: **https://silsil.vercel.app** (Vercel + Supabase). 새 계정을 만들어 사용할 수 있습니다. 로컬 기록은 JSON 백업·복구로 옮깁니다.
 
 ## 실행
 
