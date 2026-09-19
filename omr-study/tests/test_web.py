@@ -52,6 +52,16 @@ def test_repeated_create_with_same_save_token_is_idempotent():
     assert len(client.get("/api/exams").json()) == 1
 
 
+def test_partial_update_does_not_delete_existing_questions():
+    client = TestClient(app)
+    register(client, "partial-save")
+    created = client.post("/api/exams", json=payload()).json()
+    partial = {**created, "subjects": [{**created["subjects"][0], "questions": created["subjects"][0]["questions"][:1]}]}
+    response = client.put("/api/exams/" + created["id"], json=partial)
+    assert response.status_code == 200, response.text
+    assert len(response.json()["subjects"][0]["questions"]) == 30
+
+
 def test_full_record_lifecycle_and_isolation():
     a = TestClient(app)
     b = TestClient(app)

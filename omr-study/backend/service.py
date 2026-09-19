@@ -171,9 +171,6 @@ def update_exam(e, payload, db):
         else {}
     )
     existing = {s.subject: s for s in e.subjects}
-    for s in list(e.subjects):
-        if s.subject not in subjects:
-            e.subjects.remove(s)
     for src in payload.subjects:
         subject = existing.get(src.subject)
         if subject is None:
@@ -219,9 +216,9 @@ def update_exam(e, payload, db):
                 f.exam_id = e.id
             for key, value in fields.items():
                 setattr(target, key, value)
-        for q in list(subject.questions):
-            if q.number not in seen:
-                subject.questions.remove(q)
+        # A slow or interrupted client can submit a partial snapshot. Missing
+        # subjects/questions are preserved; deletion is only performed by the
+        # dedicated delete endpoint.
         if (
             sum(q.score_value or 0 for q in subject.questions if outcome(q) == "WRONG")
             > 100
