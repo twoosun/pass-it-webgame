@@ -1,0 +1,24 @@
+# Standalone OMR service. This file does not change the existing game service.
+# Starter service + persistent disk are billable; create only after budget approval.
+services:
+  - type: web
+    name: omr-study-api
+    branch: deploy/omr-study
+    runtime: docker
+    plan: starter
+    rootDir: omr-study
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: OMR_HOST
+        value: 0.0.0.0
+      - key: OMR_HTTPS
+        value: "1"
+      - key: OMR_DATA_DIR
+        value: /var/data/omr-study
+      - key: OMR_PUBLIC_ORIGIN
+        sync: false
+    disk:
+      name: omr-study-data
+      mountPath: /var/data
+      sizeGB: 1
