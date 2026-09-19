@@ -45,6 +45,7 @@ class SubjectInput(Model):
 
 
 class ExamInput(Model):
+    save_token: str | None = Field(default=None, min_length=16, max_length=80)
     name: str = Field(min_length=1, max_length=200)
     round: str = Field(default="", max_length=100)
     exam_date: date | None = None

@@ -26,8 +26,14 @@ OMR_LOCK = threading.Lock()
 
 
 def db_session():
-    with SessionLocal() as db:
+    db = SessionLocal()
+    try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def digest(value):
@@ -175,8 +181,11 @@ def change_user(
     return user_json(user)
 
 
-def owned_exam(exam_id, user, db):
-    exam = db.query(Exam).filter_by(id=exam_id, user_id=user.id).first()
+def owned_exam(exam_id, user, db, for_update=False):
+    query = db.query(Exam).filter_by(id=exam_id, user_id=user.id)
+    if for_update:
+        query = query.with_for_update()
+    exam = query.first()
     if not exam:
         raise HTTPException(404, "시험을 찾을 수 없습니다")
     return exam
@@ -238,6 +247,14 @@ def exams(
 
 @app.post("/api/exams")
 def create_exam(payload: ExamInput, user=Depends(current_user), db=Depends(db_session)):
+    if payload.save_token:
+        saved = (
+            db.query(Exam)
+            .filter_by(user_id=user.id, save_token=payload.save_token)
+            .first()
+        )
+        if saved:
+            return exam_json(saved, db)
     duplicate = (
         db.query(Exam)
         .filter_by(
@@ -248,7 +265,13 @@ def create_exam(payload: ExamInput, user=Depends(current_user), db=Depends(db_se
         )
         .first()
     )
-    e = Exam(id=str(uuid4()), user_id=user.id, created_at=time.time(), revision=1)
+    e = Exam(
+        id=str(uuid4()),
+        user_id=user.id,
+        save_token=payload.save_token,
+        created_at=time.time(),
+        revision=1,
+    )
     db.add(e)
     update_exam(e, payload, db)
     db.commit()
@@ -267,7 +290,7 @@ def get_exam(exam_id: str, user=Depends(current_user), db=Depends(db_session)):
 def put_exam(
     exam_id: str, payload: ExamInput, user=Depends(current_user), db=Depends(db_session)
 ):
-    e = owned_exam(exam_id, user, db)
+    e = owned_exam(exam_id, user, db, for_update=True)
     if payload.revision is not None and payload.revision != e.revision:
         raise HTTPException(409, "다른 창에서 수정되었습니다. 다시 불러오세요.")
     update_exam(e, payload, db)

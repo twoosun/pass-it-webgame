@@ -14,7 +14,6 @@ from sqlalchemy import (
     text,
     MetaData,
 )
-from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -47,7 +46,16 @@ engine = create_engine(
     connect_args={"check_same_thread": False}
     if url.startswith("sqlite")
     else {"prepare_threshold": None, "connect_timeout": 15},
-    **({"poolclass": NullPool} if IS_POSTGRES else {}),
+    **(
+        {
+            "pool_size": 1,
+            "max_overflow": 0,
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+        }
+        if IS_POSTGRES
+        else {}
+    ),
 )
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
 
@@ -76,6 +84,7 @@ class Exam(Base):
     __tablename__ = "exams"
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    save_token: Mapped[str | None] = mapped_column(String, nullable=True)
     name: Mapped[str] = mapped_column(String)
     round: Mapped[str] = mapped_column(String, default="")
     exam_date: Mapped[str] = mapped_column(String)
@@ -146,6 +155,7 @@ def migrate_manual_grading(connection):
     additions = {
         "questions": {"grading_status": "VARCHAR"},
         "exams": {
+            "save_token": "VARCHAR",
             "date_needs_review": "BOOLEAN DEFAULT FALSE",
             "date_recognition": "VARCHAR DEFAULT ''",
         },
@@ -161,6 +171,13 @@ def migrate_manual_grading(connection):
                 connection.execute(
                     text(f"ALTER TABLE {target} ADD COLUMN {name} {definition}")
                 )
+    exam_target = "omr.exams" if IS_POSTGRES else "exams"
+    connection.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_exams_user_save_token "
+            f"ON {exam_target} (user_id, save_token)"
+        )
+    )
 
 
 with engine.begin() as connection:

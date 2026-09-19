@@ -39,6 +39,19 @@ def payload():
     }
 
 
+def test_repeated_create_with_same_save_token_is_idempotent():
+    client = TestClient(app)
+    register(client, "idempotent-save")
+    data = payload()
+    data["save_token"] = "save-token-1234567890"
+    first = client.post("/api/exams", json=data)
+    second = client.post("/api/exams", json=data)
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert second.json()["id"] == first.json()["id"]
+    assert len(client.get("/api/exams").json()) == 1
+
+
 def test_full_record_lifecycle_and_isolation():
     a = TestClient(app)
     b = TestClient(app)

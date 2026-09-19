@@ -1,6 +1,6 @@
 import { analyzeUpload, uploadAttachment, exportBackup, importBackup } from "./cloud";
 import type { Question } from "./manualGrading";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   LineChart,
@@ -741,6 +741,7 @@ function ExamList({ fail }: any) {
   );
 }
 const emptyExam = () => ({
+  save_token: crypto.randomUUID(),
   name: "",
   round: "",
   exam_date: today(),
@@ -779,6 +780,8 @@ function blankSubject(subject: string) {
 }
 function Editor({ id, user, fail }: any) {
   const key = "omr-draft:" + user.id + ":" + (id || "new");
+  const saveInFlight = useRef(false);
+  const skipDraftWrite = useRef(false);
   const [exam, setExam] = useState<Any | null>(null),
     [active, setActive] = useState("math"),
     [busy, setBusy] = useState(false),
@@ -792,6 +795,9 @@ function Editor({ id, user, fail }: any) {
     let draft: Any | null = null;
     try {
       draft = JSON.parse(localStorage.getItem(key) || "null");
+      if (draft && !id && !draft.save_token) {
+        draft = { ...draft, save_token: crypto.randomUUID() };
+      }
     } catch {}
     if (id)
       api("/exams/" + id)
@@ -803,8 +809,22 @@ function Editor({ id, user, fail }: any) {
     else setExam(draft || emptyExam());
   }, [id]);
   useEffect(() => {
-    if (exam) localStorage.setItem(key, JSON.stringify(exam));
+    if (!exam) return;
+    if (skipDraftWrite.current) {
+      skipDraftWrite.current = false;
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify(exam));
   }, [exam, key]);
+  useEffect(() => {
+    const protectSave = (event: BeforeUnloadEvent) => {
+      if (!busy) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protectSave);
+    return () => window.removeEventListener("beforeunload", protectSave);
+  }, [busy]);
   const change = (field: string, value: any) =>
     setExam((e: Any) => ({ ...e, [field]: value }));
   const changeSubject = (name: string, value: any) =>
@@ -845,22 +865,43 @@ function Editor({ id, user, fail }: any) {
   const grade = (number:number,status:'CORRECT'|'WRONG'|null) => setExam((e:Any)=>({...e,subjects:e.subjects.map((s:Any)=>s.subject===active?{...s,questions:s.questions.map((q:Any)=>q.number===number?gradeQuestion(q as Question,status):q)}:s)}));
   const gradeAll = (status:'CORRECT'|'WRONG'|null) => setExam((e:Any)=>({...e,subjects:e.subjects.map((s:Any)=>s.subject===active?{...s,questions:s.questions.map((q:Any)=>gradeQuestion(q as Question,status))}:s)}));
   async function save(state: string) {
-    if (!exam) return;
+    if (!exam || saveInFlight.current) return;
     if(state === "COMPLETED" && (!exam.exam_date || exam.date_needs_review)) { setMessage("OMR 날짜를 확인하고 시험 날짜를 직접 입력하세요."); return; }
+    saveInFlight.current = true;
     setBusy(true);
+    setMessage("서버에 안전하게 저장하는 중입니다. 잠시만 기다려 주세요.");
+    const submittedRevision = exam.revision;
     try {
       const result = await send(
         id ? "/exams/" + id : "/exams",
         { ...exam, exam_date: exam.exam_date || null, state },
         id ? "PUT" : "POST",
       );
+      skipDraftWrite.current = true;
       localStorage.removeItem(key);
       setExam(result);
       setMessage(result.warning || "시험 기록을 저장했습니다.");
       if (!id) go("exam/" + result.id);
     } catch (e) {
+      // The server may have committed just before a network timeout. Confirm
+      // the revision before reporting failure so users do not retry a save
+      // that already succeeded.
+      if (id && submittedRevision != null) {
+        try {
+          const latest = await api("/exams/" + id);
+          if (latest.revision > submittedRevision) {
+            skipDraftWrite.current = true;
+            localStorage.removeItem(key);
+            setExam(latest);
+            setMessage("저장이 완료되었습니다. 응답이 늦어 서버 기록을 다시 확인했습니다.");
+            return;
+          }
+        } catch {}
+      }
+      setMessage("저장에 실패했습니다. 입력 내용은 이 브라우저에 임시 보관되어 있습니다.");
       fail(e);
     } finally {
+      saveInFlight.current = false;
       setBusy(false);
     }
   }

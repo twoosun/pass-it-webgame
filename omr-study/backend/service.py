@@ -101,6 +101,7 @@ def exam_json(e, db, files=None):
             k: getattr(e, k)
             for k in (
                 "id",
+                "save_token",
                 "name",
                 "round",
                 "exam_date",
@@ -141,11 +142,34 @@ def update_exam(e, payload, db):
     subjects = [s.subject for s in payload.subjects]
     if len(set(subjects)) != len(subjects):
         raise HTTPException(422, "과목 중복")
+
+    # Populate required exam fields before any query can trigger autoflush for
+    # a newly created record.
     for k in ("name", "round", "exam_type", "memo", "state"):
         setattr(e, k, getattr(payload, k))
     e.exam_date = payload.exam_date.isoformat() if payload.exam_date else ""
     e.date_needs_review = payload.date_needs_review
     e.date_recognition = payload.date_recognition
+
+    # OMR records can contain hundreds of crop references. Fetch them in one
+    # query instead of issuing one remote database round trip per question.
+    requested_file_ids = set(payload.file_ids)
+    requested_file_ids.update(
+        q.crop_file_id
+        for subject in payload.subjects
+        for q in subject.questions
+        if q.crop_file_id
+    )
+    files_by_id = (
+        {
+            file.id: file
+            for file in db.query(StoredFile)
+            .filter(StoredFile.id.in_(requested_file_ids))
+            .all()
+        }
+        if requested_file_ids
+        else {}
+    )
     existing = {s.subject: s for s in e.subjects}
     for s in list(e.subjects):
         if s.subject not in subjects:
@@ -184,7 +208,7 @@ def update_exam(e, payload, db):
             if q.grading_status == "CORRECT":
                 fields["score_value"] = None
             if q.crop_file_id:
-                f = db.get(StoredFile, q.crop_file_id)
+                f = files_by_id.get(q.crop_file_id)
                 if (
                     not f
                     or f.kind.startswith("pending:")
@@ -204,7 +228,7 @@ def update_exam(e, payload, db):
         ):
             raise HTTPException(422, "오답 배점 합계는 100점을 넘을 수 없습니다.")
     for file_id in payload.file_ids:
-        f = db.get(StoredFile, file_id)
+        f = files_by_id.get(file_id)
         if (
             not f
             or f.kind.startswith("pending:")
