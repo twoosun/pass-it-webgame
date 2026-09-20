@@ -19,8 +19,8 @@ type Any = Record<string, any>;
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
     <span className={`brand-logo${compact ? " compact" : ""}`} aria-label="실모실록">
-      <img className="brand-lockup" src="/brand-logo.png" alt="실모실록 · 실전 모의고사 학습 기록" />
-      <img className="brand-icon" src="/brand-icon.png" alt="" aria-hidden="true" />
+      <img className="brand-lockup" src="/brand-logo-red.png" alt="실모실록 · 실전 모의고사 학습 기록" />
+      <img className="brand-icon" src="/brand-icon-red.png" alt="" aria-hidden="true" />
     </span>
   );
 }
@@ -154,7 +154,7 @@ function App() {
     return () => window.removeEventListener("hashchange", f);
   }, []);
   const fail = (e: any) => setError(e.message || String(e));
-  if (loading) return <div className="loading">기록을 불러오는 중…</div>;
+  if (loading) return <Auth onLogin={setUser} checking />;
   if (!user) return <Auth onLogin={setUser} />;
   const menu = [
     ["dashboard", "대시보드"],
@@ -229,7 +229,7 @@ function App() {
     </div>
   );
 }
-function Auth({ onLogin }: any) {
+function Auth({ onLogin, checking = false }: any) {
   const [register, setRegister] = useState(false),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -266,6 +266,7 @@ function Auth({ onLogin }: any) {
       </section>
       <section className="auth-form">
         <div>
+          {checking && <p className="auth-checking">로그인 상태를 확인하고 있습니다…</p>}
           <p className="eyebrow">WELCOME TO OMR STUDY</p>
           <h2>
             {register ? "공부 기록을 시작하세요" : "다시 만나서 반가워요"}
@@ -791,6 +792,9 @@ function Editor({ id, user, fail }: any) {
     [onlyReview, setOnlyReview] = useState(false),
     [preview, setPreview] = useState<Any | null>(null),
     [stage, setStage] = useState("result_overlay");
+  useEffect(() => {
+    if (!id) api("/health").catch(() => {});
+  }, [id]);
   useEffect(() => {
     let draft: Any | null = null;
     try {
