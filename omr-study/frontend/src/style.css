@@ -1294,15 +1294,15 @@ thead th { background: #f3f5f8; color: #34455e; font-weight: 650; }
 .loading { color: #58718f; }
 
 .auth { background: #f4f6f9; }
-.auth-story { background: #17345e; color: #d8e2ef; }
-.auth-story .brand { width: fit-content; padding: 12px 16px; border-radius: 12px; background: #fff; }
+.auth-story { background: #edf3f8; color: #40536b; }
+.auth-story .brand { width: fit-content; padding: 0; background: transparent; }
 .auth-story .brand-lockup { width: min(440px, 75vw); }
 .auth-story .brand-name { color: #fff; }
 .auth-story .brand-name b { color: #8fc0ff; }
-.auth-story h1 { color: #fff; }
-.auth-story > p { color: #bac8d9; }
-.auth-story .eyebrow { color: #b9c9db; }
-.paper-art { background: #fff; color: #273d5b; box-shadow: 8px 15px 0 #0e274b; transform: rotate(-1.5deg); }
+.auth-story h1 { color: #14233a; }
+.auth-story > p { color: #53667e; }
+.auth-story .eyebrow { color: #6b7e95; }
+.paper-art { background: #fff; color: #273d5b; box-shadow: 8px 15px 0 #b9c8d9; transform: rotate(-1.5deg); }
 .art-dots { color: #6d8db4; }
 .auth-form { background: #fff; }
 .auth-checking { margin-bottom: 16px; color: #657187; font-size: 13px; }
