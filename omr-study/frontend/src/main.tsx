@@ -425,9 +425,12 @@ function Dashboard({ fail }: any) {
         title="차곡차곡, 나의 공부 기록"
         description="지난 시험을 돌아보고, 다음 한 걸음을 준비하세요."
         action={
-          <button className="primary" onClick={() => go("new")}>
-            ＋ 새 시험 기록
-          </button>
+          <div className="actions dashboard-actions">
+            <a className="guide-button" href="/guide.html" target="_blank" rel="noreferrer">처음 이용하시나요? 이용 가이드 ↗</a>
+            <button className="primary" onClick={() => go("new")}>
+              ＋ 새 시험 기록
+            </button>
+          </div>
         }
       />
       <section className="summary-grid">
@@ -1480,8 +1483,25 @@ function Wrong({ retry, fail }: any) {
       <div className="wrong-grid">
         {data.map((q) => (
           <article className="wrong-card" key={q.id}>
-            <div className="section-title">
+            <button className="wrong-card-main" onClick={() => go("wrong/" + q.id)}>
               <span className="badge">{labels[q.subject]}</span>
+              <strong>{q.number}번</strong>
+              <span className="wrong-exam-name">{q.exam_name} {q.round}</span>
+              <small>{q.exam_date}</small>
+            </button>
+            <div className="wrong-card-actions">
+              <button
+                className={q.review_status !== "해결" ? "active" : ""}
+                onClick={() => patch(q, { review_status: "미복습" })}
+              >
+                미해결
+              </button>
+              <button
+                className={q.review_status === "해결" ? "active solved" : ""}
+                onClick={() => patch(q, { review_status: "해결" })}
+              >
+                해결
+              </button>
               <button
                 className="star"
                 aria-label="중요 문제"
@@ -1489,44 +1509,7 @@ function Wrong({ retry, fail }: any) {
               >
                 {q.favorite ? "★" : "☆"}
               </button>
-            </div>
-            <h2>
-              {q.number}번 <small>{states[q.outcome]}</small>
-            </h2>
-            <p>
-              {q.exam_name} {q.round}
-            </p>
-            <small className="muted">{q.exam_date}</small>
-            <div className="answer-pair">
-              <span>
-                내 답 <b>{q.user_answer}</b>
-              </span>
-              <span>
-                채점 <b>{states[q.outcome]}</b>
-              </span>
-              <small>{q.score_value ?? "—"}점</small>
-            </div>
-            <div>
-              {q.tags.map((t: string) => (
-                <span className="badge" key={t}>
-                  {t}
-                </span>
-              ))}
-            </div>
-            <p className="note-preview">{q.note || "아직 메모가 없어요."}</p>
-            <div className="actions">
-              <select
-                value={q.review_status}
-                onChange={(e) => patch(q, { review_status: e.target.value })}
-              >
-                {reviews.map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
-              <button onClick={() => go("wrong/" + q.id)}>상세</button>
-              <button onClick={() => patch(q, { review_status: "해결" })}>
-                해결 ✓
-              </button>
+              <button onClick={() => go("wrong/" + q.id)}>세부</button>
             </div>
           </article>
         ))}

@@ -1282,9 +1282,20 @@ details pre, .answer-pair { background: #f4f6f9; }
 .computed-score { color: #173f78 !important; }
 .notice { background: #edf4fb; color: #355575; border-color: #c8d9eb; }
 .error { background: #fff0ed; color: #914c41; border: 1px solid #ecc9c2; }
-.wrong-grid { gap: 14px; }
-.wrong-card { border-color: var(--line); border-radius: 8px; padding: 19px; }
+.wrong-grid { grid-template-columns: 1fr; gap: 8px; }
+.wrong-card { display: flex; align-items: center; gap: 14px; border-color: var(--line); border-radius: 8px; padding: 10px 12px; }
+.wrong-card-main { flex: 1; min-width: 0; display: grid; grid-template-columns: auto auto minmax(120px, 1fr) auto; align-items: center; gap: 10px; border: 0; padding: 2px; text-align: left; background: transparent; }
+.wrong-card-main strong { color: var(--ink); font-size: 16px; white-space: nowrap; }
+.wrong-card-main small { color: var(--muted); white-space: nowrap; }
+.wrong-exam-name { overflow: hidden; color: #455a73; text-overflow: ellipsis; white-space: nowrap; }
+.wrong-card-actions { display: flex; align-items: center; gap: 5px; }
+.wrong-card-actions button { min-height: 32px; padding: 6px 10px; font-size: 12px; }
+.wrong-card-actions button.active { border-color: #9b5b52; background: #fff0ed; color: #914c41; font-weight: 700; }
+.wrong-card-actions button.active.solved { border-color: #6d9a7f; background: #edf7f0; color: #397052; }
+.wrong-card-actions .star { min-width: 32px; color: #b58b34; font-size: 18px; }
 .wrong-card > p { color: #68798e; }
+.guide-button { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 13px; border: 1px solid #cbd6e2; border-radius: 6px; background: #fff; color: #274767; font-size: 13px; }
+.guide-button:hover { border-color: #7897b9; background: #f3f7fb; }
 .repeat-grid > div { background: #f2f5f9; border-radius: 6px; }
 .stat-row { border-color: #e3e8ef; color: #63758b; }
 .stat-row b { color: #273b55; }
@@ -1390,6 +1401,12 @@ thead th { background: #f3f5f8; color: #34455e; font-weight: 650; }
   .question-grid { grid-template-columns: repeat(3, 1fr); }
   :root .manual-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wrong-grid { grid-template-columns: 1fr; }
+  .wrong-card { align-items: stretch; flex-direction: column; gap: 8px; }
+  .wrong-card-main { grid-template-columns: auto auto 1fr; }
+  .wrong-card-main small { display: none; }
+  .wrong-card-actions { justify-content: flex-end; }
+  .dashboard-actions { width: 100%; }
+  .dashboard-actions .guide-button, .dashboard-actions .primary { flex: 1; justify-content: center; }
   .repeat-grid { grid-template-columns: repeat(4, 1fr); }
   .question-editor { padding: 14px; }
   .question-editor .form-grid { grid-template-columns: 1fr 1fr; }

@@ -1,0 +1,35 @@
+:root { color: #14233a; background: #f3f6f9; font-family: Pretendard, "Noto Sans KR", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 70px; }
+header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #d6dee8; color: #63758a; font-size: 13px; }
+header img { display: block; width: 184px; height: auto; }
+.intro { padding: 54px 4px 28px; border: 0; background: transparent; }
+.kicker { margin: 0 0 12px; color: #b32a25; font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+h1 { margin: 0 0 15px; font-size: clamp(32px, 6vw, 50px); line-height: 1.18; letter-spacing: -.05em; }
+.intro > p:last-child { color: #51667e; }
+section { margin-top: 18px; padding: 27px; border: 1px solid #d8e0e9; border-radius: 12px; background: #fff; }
+.step-title { display: flex; align-items: center; gap: 11px; margin-bottom: 16px; }
+.step-title b { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #173f78; color: #fff; font-size: 13px; }
+h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
+p { margin: 8px 0; color: #435870; line-height: 1.7; }
+.downloads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.downloads a { display: flex; align-items: center; justify-content: space-between; padding: 17px; border: 1px solid #cdd9e6; border-radius: 8px; color: #173f78; text-decoration: none; }
+.downloads a:hover { border-color: #6e91ba; background: #f4f8fc; }
+.downloads span { color: #6e8095; font-size: 12px; }
+.date-guide { display: grid; grid-template-columns: 1fr 230px; gap: 30px; align-items: center; }
+.date-guide img { width: 100%; max-height: 285px; object-fit: contain; border: 1px solid #e0e4e9; border-radius: 8px; }
+.date-example { margin: 15px 0 11px; padding: 12px 14px; border-radius: 7px; background: #edf3f8; color: #344e6a; }
+.date-guide small { display: block; color: #6e7e90; line-height: 1.65; }
+.start { display: inline-flex; margin-top: 12px; padding: 11px 16px; border-radius: 7px; background: #173f78; color: #fff; font-weight: 700; text-decoration: none; }
+@media (max-width: 640px) {
+  main { width: calc(100% - 24px); padding-top: 18px; }
+  header img { width: 155px; }
+  header span { font-size: 11px; }
+  .intro { padding: 38px 3px 18px; }
+  section { padding: 20px; }
+  .downloads { grid-template-columns: 1fr; }
+  .downloads a { min-width: 0; }
+  .date-guide { grid-template-columns: 1fr; }
+  .date-guide img { width: min(100%, 310px); margin: 0 auto; }
+}
